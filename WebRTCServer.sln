@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31729.503
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Signaler", "Signaler\Signaler.csproj", "{2D7F9722-471E-434B-9F30-A6C5CE181A90}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mixer", "Mixer\Mixer.csproj", "{3C149224-DEDE-4FD3-823E-F3DED4A1AD14}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebServer", "WebServer\WebServer.csproj", "{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2D7F9722-471E-434B-9F30-A6C5CE181A90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D7F9722-471E-434B-9F30-A6C5CE181A90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D7F9722-471E-434B-9F30-A6C5CE181A90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D7F9722-471E-434B-9F30-A6C5CE181A90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C149224-DEDE-4FD3-823E-F3DED4A1AD14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C149224-DEDE-4FD3-823E-F3DED4A1AD14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C149224-DEDE-4FD3-823E-F3DED4A1AD14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C149224-DEDE-4FD3-823E-F3DED4A1AD14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4D522EB0-8AE9-49E3-8221-19B2383BC9CF}
+	EndGlobalSection
+EndGlobal

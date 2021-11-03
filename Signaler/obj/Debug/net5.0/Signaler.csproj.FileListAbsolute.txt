@@ -1,0 +1,12 @@
+C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\Signaler.deps.json
+C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\Signaler.dll
+C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\ref\Signaler.dll
+C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\Signaler.pdb
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.GeneratedMSBuildEditorConfig.editorconfig
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.AssemblyInfoInputs.cache
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.AssemblyInfo.cs
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.csproj.CoreCompileInputs.cache
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.dll
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\ref\Signaler.dll
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.pdb
+C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.csproj.AssemblyReference.cache
