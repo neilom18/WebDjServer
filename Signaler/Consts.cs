@@ -1,4 +1,4 @@
-﻿namespace RTCServer
+﻿namespace Signaler
 {
     public static class Consts
     {

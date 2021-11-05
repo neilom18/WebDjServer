@@ -2,6 +2,8 @@ C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\Signaler.deps.json
 C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\Signaler.dll
 C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\ref\Signaler.dll
 C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\Signaler.pdb
+C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\RTCServer.dll
+C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\RTCServer.pdb
 C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.csproj.AssemblyReference.cache
 C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.GeneratedMSBuildEditorConfig.editorconfig
 C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.AssemblyInfoInputs.cache
@@ -10,6 +12,3 @@ C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.csproj.CoreCompi
 C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.dll
 C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\ref\Signaler.dll
 C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.pdb
-C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\RTCServer.dll
-C:\Repositorios\WebRTCServer\Signaler\bin\Debug\net5.0\RTCServer.pdb
-C:\Repositorios\WebRTCServer\Signaler\obj\Debug\net5.0\Signaler.csproj.CopyComplete

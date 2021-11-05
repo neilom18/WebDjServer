@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using RTCServer;
 using SIPSorcery.Net;
 using System;
 using System.Linq;
@@ -156,6 +155,9 @@ namespace Signaler.Hubs
         public async Task<RTCSessionDescriptionInit> GetServerOffer()
         {
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
+            //var pc = _peerConnectionManager.Get(room.Id);
+            //if (pc != null) return pc.createOffer(null);
             return await _peerConnectionManager.CreateServerOffer(user.Id);
         }
 
@@ -165,8 +167,8 @@ namespace Signaler.Hubs
         public void SetRemoteDescription(RTCSessionDescriptionInit rtcSessionDescriptionInit)
         {
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
-            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
-            _peerConnectionManager.SetRemoteDescription(room.Id, rtcSessionDescriptionInit);
+            //var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
+            _peerConnectionManager.SetRemoteDescription(user.Id, rtcSessionDescriptionInit);
         }
 
         /// <summary>
@@ -175,8 +177,8 @@ namespace Signaler.Hubs
         public void AddIceCandidate(RTCIceCandidateInit iceCandidate)
         {
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
-            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
-            _peerConnectionManager.AddIceCandidate(room.Id, iceCandidate);
+            //var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
+            _peerConnectionManager.AddIceCandidate(user.Id, iceCandidate);
         }
 
         private JsonSerializerSettings JsonSerializerOptions =>

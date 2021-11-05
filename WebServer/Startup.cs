@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using RTCServer;
 using Signaler;
 using Signaler.Hubs;
 
@@ -28,6 +27,8 @@ namespace WebServer
                 .AddJsonOptions(options => {
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
                 });
+
+            //services.Add<WebRTCHub>();
 
             services.AddSingleton<IRoomManager, RoomManager>();
             services.AddSingleton<IUserManager, UserManager>();

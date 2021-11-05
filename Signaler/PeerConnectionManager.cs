@@ -1,15 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using Signaler.Hubs;
 using SIPSorcery.Net;
 using SIPSorceryMedia.Abstractions;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace RTCServer
+namespace Signaler
 {
     /*
        Instantiate the RTCPeerConnection instance,
@@ -26,6 +26,7 @@ namespace RTCServer
     public class PeerConnectionManager : IPeerConnectionManager
     {
         private readonly ILogger<PeerConnectionManager> _logger;
+        private readonly IHubContext<WebRTCHub> _webRTCHub;
         private ConcurrentDictionary<string, RTCPeerConnection> _peerConnections = new ConcurrentDictionary<string, RTCPeerConnection>();
 
         private RTCConfiguration _config = new RTCConfiguration
@@ -33,9 +34,10 @@ namespace RTCServer
             iceServers = new List<RTCIceServer> { new RTCIceServer { urls = Consts.STUN_SERVERS_URL } }
         };
 
-        public PeerConnectionManager(ILogger<PeerConnectionManager> logger)
+        public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub)
         {
             _logger = logger;
+            _webRTCHub = webRTCHub;
             _peerConnections ??= new ConcurrentDictionary<string, RTCPeerConnection>();
         }
 
@@ -43,49 +45,28 @@ namespace RTCServer
         ///     Instantiate the RTCPeerConnection instance,
         ///     Add the audio and/or video tracks as required,
         ///     Call the createOffer method to acquire an SDP offer that can be sent to the remote peer,
-        ///     
-        ///     TODO: ACHO QUE TEM QUE VIR ESSE CARA: SDPSSRC DO CLIENTE PRA PEGAR O STREAM CORRETO ?????
         /// </summary>
         public async Task<RTCSessionDescriptionInit> CreateServerOffer(string id)
         {
             var peerConnection = new RTCPeerConnection(_config);
 
             /// Ver bem como é isso aq no lado do servidor
-            var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, true,
-                new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 96)) }, MediaStreamStatusEnum.SendRecv);
+            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, true,
+            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 96)) }, MediaStreamStatusEnum.SendRecv);
+
+            var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false, new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
+            
             peerConnection.addTrack(audioTrack);
-            ///
 
             peerConnection.OnAudioFormatsNegotiated += (audioFormats) =>
             {
                 _logger.LogInformation("{OnAudioFormatsNegotiated}");
             };
 
-            peerConnection.OnRtpPacketReceived += (IPEndPoint rep, SDPMediaTypesEnum media, RTPPacket rtpPkt) =>
-            {
-                _logger.LogInformation("{OnRtpPacketReceived}");
-                _logger.LogDebug($"RTP {media} pkt received, SSRC {rtpPkt.Header.SyncSource}, SeqNum {rtpPkt.Header.SequenceNumber}.");
-            };
-
             peerConnection.OnTimeout += (mediaType) =>
             {
                 _logger.LogInformation("{OnTimeout}");
                 _logger.LogWarning($"Timeout for {mediaType}.");
-            };
-
-            peerConnection.onconnectionstatechange += (state) =>
-            {
-                _logger.LogInformation("{onconnectionstatechange}");
-                _logger.LogDebug($"Peer connection {id} state changed to {state}.");
-
-                if (state == RTCPeerConnectionState.closed || state == RTCPeerConnectionState.disconnected || state == RTCPeerConnectionState.failed)
-                {
-                    _peerConnections.TryRemove(id, out _);
-                }
-                else if (state == RTCPeerConnectionState.connected)
-                {
-                    _logger.LogDebug("Peer connection connected.");
-                }
             };
 
             peerConnection.ondatachannel += (rdc) =>
@@ -152,32 +133,52 @@ namespace RTCServer
                 if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
                     peerConnection.signalingState == RTCSignalingState.have_remote_offer)
                 {
-
+                    _webRTCHub.Clients.All.SendAsync("IceCandidateResult", candidate).GetAwaiter().GetResult();
                 }
             };
 
-            peerConnection.onconnectionstatechange += async (state) =>
+            peerConnection.onconnectionstatechange += (state) =>
             {
-                _logger.LogInformation($"Status da 'Peer connection' alterada para:  {state}.");
+                _logger.LogInformation("{onconnectionstatechange}");
+                _logger.LogDebug($"Peer connection {id} state changed to {state}.");
 
-                if (state == RTCPeerConnectionState.connected)
+                if (state == RTCPeerConnectionState.closed || state == RTCPeerConnectionState.disconnected || state == RTCPeerConnectionState.failed)
                 {
-                    _logger.LogInformation("Creating RTP session for ffplay.");
-                    var rtpSession = CreateRtpSession(peerConnection.AudioLocalTrack?.Capabilities);
-
-                    peerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
-                    {
-                        if (media == SDPMediaTypesEnum.audio)
-                        {
-                            _logger.LogInformation("novo aúdio....");
-                            var sample = pkt.Payload;
-                        }
-                    };
+                    _peerConnections.TryRemove(id, out _);
                 }
+                else if (state == RTCPeerConnectionState.connected)
+                {
+                    _logger.LogDebug("Peer connection connected.");
+                }
+
+                var rtpSession = CreateRtpSession(peerConnection.AudioLocalTrack?.Capabilities);
+
+                peerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
+                {
+                    _logger.LogInformation("{OnRtpPacketReceived}");
+                    _logger.LogDebug($"RTP {media} pkt received, SSRC {pkt.Header.SyncSource}, SeqNum {pkt.Header.SequenceNumber}.");
+
+                    if (media == SDPMediaTypesEnum.audio && rtpSession.AudioDestinationEndPoint != null)
+                    {
+                        _logger.LogDebug($"Forwarding {media} RTP packet to ffplay timestamp {pkt.Header.Timestamp}.");
+                        
+                        // AQUIIII
+                        rtpSession.SendRtpRaw(media, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
+                        rtpSession.SendAudio(1, pkt.Payload);
+                    }
+
+                    if (media == SDPMediaTypesEnum.audio)
+                    {
+                        _logger.LogInformation("novo aúdio....");
+                        var sample = pkt.Payload;
+                       
+                        //peerConnection.DataChannels[0].send("@@@@@@@@@@@@@@@@@ " + peerConnection.SessionID);
+                    }
+                };
             };
 
-            var offerSdp = peerConnection.createOffer(new RTCOfferOptions { X_ExcludeIceCandidates = true });
-
+            await peerConnection.createDataChannel("channel");
+            var offerSdp = peerConnection.createOffer(null);
             await peerConnection.setLocalDescription(offerSdp);
 
             _peerConnections.TryAdd(id, peerConnection);
@@ -222,6 +223,13 @@ namespace RTCServer
             rtpSession.SetDestination(SDPMediaTypesEnum.audio, new IPEndPoint(IPAddress.Loopback, 8082), new IPEndPoint(IPAddress.Loopback, 8083));
 
             return rtpSession;
+        }
+
+        public RTCPeerConnection Get(string id)
+        {
+            var pc = _peerConnections.Where(p => p.Key == id).SingleOrDefault();
+            if (pc.Value != null) return pc.Value;
+            return null;
         }
     }
 }
