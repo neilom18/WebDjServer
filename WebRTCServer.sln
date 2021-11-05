@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mixer", "Mixer\Mixer.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebServer", "WebServer\WebServer.csproj", "{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RTCServer", "RTCServer\RTCServer.csproj", "{49FCD2D6-6F6F-45A5-BFBB-EB213B73A2F8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C3F8027D-0308-4AD7-9870-FD0EB510E5F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49FCD2D6-6F6F-45A5-BFBB-EB213B73A2F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49FCD2D6-6F6F-45A5-BFBB-EB213B73A2F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49FCD2D6-6F6F-45A5-BFBB-EB213B73A2F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49FCD2D6-6F6F-45A5-BFBB-EB213B73A2F8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

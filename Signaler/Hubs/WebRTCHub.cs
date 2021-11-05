@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using RTCServer;
+using SIPSorcery.Net;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,15 +17,17 @@ namespace Signaler.Hubs
         private readonly ILogger<WebRTCHub> _logger;
         private readonly IRoomManager _roomManager;
         private readonly IUserManager _userManager;
+        private readonly IPeerConnectionManager _peerConnectionManager;
 
         /// <summary>
         ///     ctor
         /// </summary>
-        public WebRTCHub(ILogger<WebRTCHub> logger, IRoomManager roomManager, IUserManager userManager)
+        public WebRTCHub(ILogger<WebRTCHub> logger, IRoomManager roomManager, IUserManager userManager, IPeerConnectionManager peerConnectionManager)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _roomManager = roomManager ?? throw new ArgumentNullException(nameof(roomManager));
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+            _peerConnectionManager = peerConnectionManager ?? throw new ArgumentNullException(nameof(peerConnectionManager));
         }
 
         /// <summary>
@@ -32,6 +36,10 @@ namespace Signaler.Hubs
         public override Task OnConnectedAsync()
         {
             _logger.LogInformation("Nova conexão criada no Hub RTC! {0}", Context.ConnectionId);
+
+            NotifyUpdateUsers(true).GetAwaiter().GetResult();
+            NotifyRoomUpdates(true).GetAwaiter().GetResult();
+
             return base.OnConnectedAsync();
         }
 
@@ -40,8 +48,16 @@ namespace Signaler.Hubs
         /// </summary>
         public override Task OnDisconnectedAsync(Exception exception)
         {
-            _userManager.Delete(Context.ConnectionId);
-            _logger.LogInformation("Conexão no Hub RTC finalizada! {0} | {1}", Context.ConnectionId, exception.ToString());
+            var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
+            room.RemoveUser(user);
+            user.Room = null;
+            _userManager.Delete(user.Id);
+            _logger.LogInformation("Conexão no Hub RTC finalizada! {0} | {1}", Context.ConnectionId, exception?.ToString() ?? string.Empty);
+
+            NotifyUpdateUsers().GetAwaiter().GetResult();
+            NotifyRoomUpdates().GetAwaiter().GetResult();
+
             return base.OnDisconnectedAsync(exception);
         }
 
@@ -68,6 +84,8 @@ namespace Signaler.Hubs
             await Groups.AddToGroupAsync(user.ConnectionId, room.Id);
             await Clients.Caller.SendAsync("JoinedRoom", room.Id);
             await Clients.Group(roomId).SendAsync("UserJoinedRoom", user.Username);
+            await NotifyRoomUpdates();
+            await NotifyUpdateUsers();
         }
 
         /// <summary>
@@ -83,6 +101,8 @@ namespace Signaler.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.Id);
             await Clients.Caller.SendAsync("ExitedRoom");
             await Clients.Group(roomId).SendAsync("UserExitedRoom", user.Username);
+            await NotifyRoomUpdates();
+            await NotifyUpdateUsers();
         }
 
         /// <summary>
@@ -91,7 +111,8 @@ namespace Signaler.Hubs
         public async Task CreateUser(string username)
         {
             var user = _userManager.Create(Context.ConnectionId, username);
-            await Clients.All.SendAsync("UserCreated", user.Username);
+            await Clients.All.SendAsync("UserCreated", JsonConvert.SerializeObject(user, JsonSerializerOptions));
+            await NotifyUpdateUsers(true);
         }
 
         /// <summary>
@@ -104,12 +125,64 @@ namespace Signaler.Hubs
         }
 
         /// <summary>
+        ///     Notifica alteraçoes nos usuarios
+        /// </summary>
+        public async Task NotifyUpdateUsers(bool notifyOnlyCaller = false)
+        {
+            var users = _userManager.GetAll();
+
+            if (notifyOnlyCaller)
+                await Clients.Caller.SendAsync("UpdateUsers", JsonConvert.SerializeObject(users, JsonSerializerOptions));
+
+            await Clients.All.SendAsync("UpdateUsers", JsonConvert.SerializeObject(users, JsonSerializerOptions));
+        }
+
+        /// <summary>
         ///     Notifica alterações nas salas
         /// </summary>
-        public async Task NotifyRoomUpdates()
+        public async Task NotifyRoomUpdates(bool notifyOnlyCaller = false)
         {
             var rooms = _roomManager.GetAll();
-            await Clients.All.SendAsync("UpdateRooms", JsonConvert.SerializeObject(rooms));
+
+            if (notifyOnlyCaller)
+                await Clients.Caller.SendAsync("UpdateRooms", JsonConvert.SerializeObject(rooms, JsonSerializerOptions));
+
+            await Clients.All.SendAsync("UpdateRooms", JsonConvert.SerializeObject(rooms, JsonSerializerOptions));
         }
+
+        /// <summary>
+        ///     Cria uma oferta SDP servidor > cliente
+        /// </summary>
+        public async Task<RTCSessionDescriptionInit> GetServerOffer()
+        {
+            var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            return await _peerConnectionManager.CreateServerOffer(user.Id);
+        }
+
+        /// <summary>
+        ///     Seta a remotedescription do cliente na conexao da sala
+        /// </summary>
+        public void SetRemoteDescription(RTCSessionDescriptionInit rtcSessionDescriptionInit)
+        {
+            var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
+            _peerConnectionManager.SetRemoteDescription(room.Id, rtcSessionDescriptionInit);
+        }
+
+        /// <summary>
+        ///     Adiciona um ice candidate
+        /// </summary>
+        public void AddIceCandidate(RTCIceCandidateInit iceCandidate)
+        {
+            var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
+            _peerConnectionManager.AddIceCandidate(room.Id, iceCandidate);
+        }
+
+        private JsonSerializerSettings JsonSerializerOptions =>
+            new JsonSerializerSettings()
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
     }
 }

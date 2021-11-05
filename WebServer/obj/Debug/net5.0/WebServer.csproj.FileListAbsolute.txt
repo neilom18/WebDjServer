@@ -30,3 +30,10 @@ C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.dll
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\ref\WebServer.dll
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.pdb
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.genruntimeconfig.cache
+C:\Repositorios\WebRTCServer\WebServer\bin\Debug\net5.0\DnsClient.dll
+C:\Repositorios\WebRTCServer\WebServer\bin\Debug\net5.0\BouncyCastle.Crypto.dll
+C:\Repositorios\WebRTCServer\WebServer\bin\Debug\net5.0\SIPSorcery.dll
+C:\Repositorios\WebRTCServer\WebServer\bin\Debug\net5.0\websocket-sharp.dll
+C:\Repositorios\WebRTCServer\WebServer\bin\Debug\net5.0\SIPSorceryMedia.Abstractions.dll
+C:\Repositorios\WebRTCServer\WebServer\bin\Debug\net5.0\RTCServer.dll
+C:\Repositorios\WebRTCServer\WebServer\bin\Debug\net5.0\RTCServer.pdb

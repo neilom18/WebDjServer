@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Signaler.Models
 {
@@ -9,34 +8,34 @@ namespace Signaler.Models
     public class Room
     {
         /// <summary>
-        ///     Usuários que participam desta sala
-        /// </summary>
-        private IList<User> _users;
-
-        /// <summary>
         ///     ctor
         /// </summary>
         public Room()
         {
-            _users ??= new List<User>();
+            Users ??= new List<User>();
         }
 
         /// <summary>
         ///     Id da sala (gerado automaticamente)
         /// </summary>
         public string Id { get; set; }
-        
+
         /// <summary>
         ///     Nome da sala
         /// </summary>
         public string Name { get; set; }
 
         /// <summary>
+        ///     Lista de usuarios
+        /// </summary>
+        public IList<User> Users { get; set; }
+
+        /// <summary>
         ///     Adiciona um usuário a sala em questão
         /// </summary>
         public void AddUser(User user)
         {
-            _users.Add(user);
+            Users.Add(user);
         }
 
         /// <summary>
@@ -44,7 +43,7 @@ namespace Signaler.Models
         /// </summary>
         public void RemoveUser(User user)
         {
-            _users.Remove(user);
+            Users.Remove(user);
         }
     }
 }
