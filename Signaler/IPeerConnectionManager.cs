@@ -1,4 +1,6 @@
-﻿using SIPSorcery.Net;
+﻿using Signaler.Models;
+using SIPSorcery.Net;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Signaler
@@ -9,5 +11,6 @@ namespace Signaler
         Task<RTCSessionDescriptionInit> CreateServerOffer(string id);
         void AddIceCandidate(string id, RTCIceCandidateInit iceCandidate);
         void SetRemoteDescription(string id, RTCSessionDescriptionInit rtcSessionDescriptionInit);
+        void SetAudioRelay(RTCPeerConnection peerConnection, string connectionId, IList<User> usersToRelay);
     }
 }

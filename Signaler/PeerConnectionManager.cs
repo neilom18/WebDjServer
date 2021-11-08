@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Signaler.Hubs;
+using Signaler.Models;
 using SIPSorcery.Net;
 using SIPSorceryMedia.Abstractions;
 using System.Collections.Concurrent;
@@ -25,8 +26,8 @@ namespace Signaler
      */
     public class PeerConnectionManager : IPeerConnectionManager
     {
-        private readonly ILogger<PeerConnectionManager> _logger;
         private readonly IHubContext<WebRTCHub> _webRTCHub;
+        private readonly ILogger<PeerConnectionManager> _logger;
         private ConcurrentDictionary<string, RTCPeerConnection> _peerConnections = new ConcurrentDictionary<string, RTCPeerConnection>();
 
         private RTCConfiguration _config = new RTCConfiguration
@@ -36,8 +37,9 @@ namespace Signaler
 
         public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub)
         {
-            _logger = logger;
-            _webRTCHub = webRTCHub;
+            _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
+            _webRTCHub = webRTCHub ?? throw new System.ArgumentNullException(nameof(webRTCHub));
+
             _peerConnections ??= new ConcurrentDictionary<string, RTCPeerConnection>();
         }
 
@@ -50,12 +52,13 @@ namespace Signaler
         {
             var peerConnection = new RTCPeerConnection(_config);
 
-            /// Ver bem como é isso aq no lado do servidor
-            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, true,
-            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 96)) }, MediaStreamStatusEnum.SendRecv);
+            // COM O OPUS NAO ESTA FUNCIONANDO AINDA
+            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
+            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 96, 48000)) }, MediaStreamStatusEnum.SendRecv);
 
-            var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false, new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
-            
+            var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
+                new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
+
             peerConnection.addTrack(audioTrack);
 
             peerConnection.OnAudioFormatsNegotiated += (audioFormats) =>
@@ -85,7 +88,6 @@ namespace Signaler
                 rdc.onmessage += (datachan, type, data) =>
                 {
                     _logger.LogInformation(datachan.label);
-
                 };
             };
 
@@ -150,31 +152,6 @@ namespace Signaler
                 {
                     _logger.LogDebug("Peer connection connected.");
                 }
-
-                var rtpSession = CreateRtpSession(peerConnection.AudioLocalTrack?.Capabilities);
-
-                peerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
-                {
-                    _logger.LogInformation("{OnRtpPacketReceived}");
-                    _logger.LogDebug($"RTP {media} pkt received, SSRC {pkt.Header.SyncSource}, SeqNum {pkt.Header.SequenceNumber}.");
-
-                    if (media == SDPMediaTypesEnum.audio && rtpSession.AudioDestinationEndPoint != null)
-                    {
-                        _logger.LogDebug($"Forwarding {media} RTP packet to ffplay timestamp {pkt.Header.Timestamp}.");
-                        
-                        // AQUIIII
-                        rtpSession.SendRtpRaw(media, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
-                        rtpSession.SendAudio(1, pkt.Payload);
-                    }
-
-                    if (media == SDPMediaTypesEnum.audio)
-                    {
-                        _logger.LogInformation("novo aúdio....");
-                        var sample = pkt.Payload;
-                       
-                        //peerConnection.DataChannels[0].send("@@@@@@@@@@@@@@@@@ " + peerConnection.SessionID);
-                    }
-                };
             };
 
             await peerConnection.createDataChannel("channel");
@@ -184,6 +161,31 @@ namespace Signaler
             _peerConnections.TryAdd(id, peerConnection);
 
             return offerSdp;
+        }
+
+        public void SetAudioRelay(RTCPeerConnection peerConnection, string connectionId, IList<User> usersToRelay)
+        {
+            peerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
+            {
+                _logger.LogInformation("{OnRtpPacketReceived}");
+                _logger.LogDebug($"RTP {media} pkt received, SSRC {pkt.Header.SyncSource}, SeqNum {pkt.Header.SequenceNumber}.");
+
+                if (media == SDPMediaTypesEnum.audio)
+                {
+                    _logger.LogInformation("novo aúdio....");
+                    _logger.LogDebug($"Forwarding {media} RTP packet to ffplay timestamp {pkt.Header.Timestamp}.");
+
+                    // MANDAR O AUDIO PRA TODO MUNDO MENOS O FALANTE
+                    foreach (var u in usersToRelay.Where(u => u.Id != connectionId)) u.PeerConnection?.SendAudio(pkt.Header.Timestamp, pkt.Payload);
+
+                    // FUNCIONAA
+                    //peerConnection.SendAudio(pkt.Header.Timestamp, pkt.Payload);
+
+                    // NAO FUNCIONA
+                    //rtpSession.SendRtpRaw(media, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
+                    //rtpSession.SendAudio(1, pkt.Payload);
+                }
+            };
         }
 
         public void SetRemoteDescription(string id, RTCSessionDescriptionInit rtcSessionDescriptionInit)

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using SIPSorcery.Net;
+using System;
 
 namespace Signaler.Models
 {
@@ -38,5 +40,11 @@ namespace Signaler.Models
         ///     A sala que o usuário está participando
         /// </summary>
         public virtual Room? Room { get; set; }
+
+        /// <summary>
+        ///     Peer connection vinculada ao usuario
+        /// </summary>
+        [JsonIgnore]
+        public RTCPeerConnection? PeerConnection { get; set; }
     }
 }

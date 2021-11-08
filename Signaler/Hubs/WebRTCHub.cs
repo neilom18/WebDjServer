@@ -156,9 +156,10 @@ namespace Signaler.Hubs
         {
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
             var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
-            //var pc = _peerConnectionManager.Get(room.Id);
-            //if (pc != null) return pc.createOffer(null);
-            return await _peerConnectionManager.CreateServerOffer(user.Id);
+            var offer = await _peerConnectionManager.CreateServerOffer(user.Id);
+            user.PeerConnection = _peerConnectionManager.Get(user.Id);
+            _peerConnectionManager.SetAudioRelay(user.PeerConnection, user.Id, room.Users);
+            return offer;
         }
 
         /// <summary>

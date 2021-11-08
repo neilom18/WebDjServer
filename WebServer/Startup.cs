@@ -28,8 +28,6 @@ namespace WebServer
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
                 });
 
-            //services.Add<WebRTCHub>();
-
             services.AddSingleton<IRoomManager, RoomManager>();
             services.AddSingleton<IUserManager, UserManager>();
             services.AddSingleton<IPeerConnectionManager, PeerConnectionManager>();
