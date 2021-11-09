@@ -32,7 +32,51 @@ namespace Signaler
 
         private RTCConfiguration _config = new RTCConfiguration
         {
-            iceServers = new List<RTCIceServer> { new RTCIceServer { urls = Consts.STUN_SERVERS_URL } }
+            //iceTransportPolicy = RTCIceTransportPolicy.all,
+            iceServers = new List<RTCIceServer>
+            {
+                new RTCIceServer { urls = "stun:stun1.l.google.com:19302" },
+                new RTCIceServer { urls = "stun:stun2.l.google.com:19302" },
+                new RTCIceServer { urls = "stun:stun3.l.google.com:19302" },
+                new RTCIceServer { urls = "stun:stun4.l.google.com:19302" },
+                new RTCIceServer { urls = "stun:stun.ekiga.net" },
+                new RTCIceServer { urls = "stun:stun.ideasip.com" },
+                new RTCIceServer
+                {
+                    urls = "turn:numb.viagenie.ca",
+                    credential = "muazkh",
+                    username = "webrtc@live.com",
+                    credentialType = RTCIceCredentialType.password
+                },
+                 new RTCIceServer
+                {
+                    urls = "turn:192.158.29.39:3478?transport=udp",
+                    credential = "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
+                    username = "28224511:1379330808",
+                    credentialType = RTCIceCredentialType.password
+                },
+                  new RTCIceServer
+                {
+                    urls = "turn:192.158.29.39:3478?transport=tcp",
+                    credential = "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
+                    username = "28224511:1379330808",
+                    credentialType = RTCIceCredentialType.password
+                },
+                   new RTCIceServer
+                {
+                    urls = "turn:turn.bistri.com:80",
+                    credential = "homeo",
+                    username = "homeo",
+                    credentialType = RTCIceCredentialType.password
+                },
+                    new RTCIceServer
+                {
+                    urls = "turn:turn.anyfirewall.com:443?transport=tcp",
+                    credential = "webrtc",
+                    username = "webrtc",
+                    credentialType = RTCIceCredentialType.password
+                },
+            }
         };
 
         public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub)
@@ -102,7 +146,7 @@ namespace Signaler
 
             peerConnection.GetRtpChannel().OnRTPDataReceived += (arg1, arg2, data) =>
             {
-                _logger.LogInformation("{OnRTPDataReceived}");
+                //_logger.LogInformation("{OnRTPDataReceived}");
             };
 
             peerConnection.onicecandidateerror += (candidate, error) =>
@@ -167,16 +211,26 @@ namespace Signaler
         {
             peerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
             {
-                _logger.LogInformation("{OnRtpPacketReceived}");
-                _logger.LogDebug($"RTP {media} pkt received, SSRC {pkt.Header.SyncSource}, SeqNum {pkt.Header.SequenceNumber}.");
+                //_logger.LogInformation("{OnRtpPacketReceived}");
+                //_logger.LogInformation("EXISTEM USUARIOS DE RELAY: " + usersToRelay.Any());
 
                 if (media == SDPMediaTypesEnum.audio)
                 {
-                    _logger.LogInformation("novo aúdio....");
-                    _logger.LogDebug($"Forwarding {media} RTP packet to ffplay timestamp {pkt.Header.Timestamp}.");
+                    //_logger.LogInformation("RECEBENDO AUDIO DE: " + connectionId);
 
                     // MANDAR O AUDIO PRA TODO MUNDO MENOS O FALANTE
-                    foreach (var u in usersToRelay.Where(u => u.Id != connectionId)) u.PeerConnection?.SendAudio(pkt.Header.Timestamp, pkt.Payload);
+                    foreach (var user in usersToRelay.Where(u => u.Id != connectionId))
+                    {
+                        //_logger.LogInformation("ENVIANDO AUDIO PARA: " + user.Username);
+
+                        //_logger.LogInformation("REMOTE TRACK: " + user?.PeerConnection.AudioRemoteTrack);
+                        //_logger.LogInformation("LOCAL TRACK: " + user?.PeerConnection.AudioLocalTrack);
+
+                        //_logger.LogInformation("AUDIO DESTINATION ENDPOINT: " + user?.PeerConnection.AudioDestinationEndPoint);
+                        //_logger.LogInformation("CONNECTION STATE: " + user?.PeerConnection.connectionState);
+
+                        user.PeerConnection?.SendAudio(pkt.Header.Timestamp, pkt.Payload);
+                    }
 
                     // FUNCIONAA
                     //peerConnection.SendAudio(pkt.Header.Timestamp, pkt.Payload);

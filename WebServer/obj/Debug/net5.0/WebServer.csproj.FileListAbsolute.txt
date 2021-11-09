@@ -36,3 +36,4 @@ C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.dll
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\ref\WebServer.dll
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.pdb
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.genruntimeconfig.cache
+C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.csproj.CopyComplete
