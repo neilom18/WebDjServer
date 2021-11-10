@@ -32,7 +32,9 @@ namespace Signaler
 
         private RTCConfiguration _config = new RTCConfiguration
         {
-            //iceTransportPolicy = RTCIceTransportPolicy.all,
+            iceTransportPolicy = RTCIceTransportPolicy.all,
+            iceCandidatePoolSize = 5,
+            X_ICEIncludeAllInterfaceAddresses = true,
             iceServers = new List<RTCIceServer>
             {
                 new RTCIceServer { urls = "stun:stun1.l.google.com:19302" },
@@ -98,7 +100,7 @@ namespace Signaler
 
             // COM O OPUS NAO ESTA FUNCIONANDO AINDA
             //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
-            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 96, 48000)) }, MediaStreamStatusEnum.SendRecv);
+            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000)) }, MediaStreamStatusEnum.SendRecv);
 
             var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
                 new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
@@ -137,16 +139,29 @@ namespace Signaler
 
             peerConnection.GetRtpChannel().OnStunMessageReceived += (msg, ep, isRelay) =>
             {
-                _logger.LogInformation("{OnStunMessageReceived}");
-                bool hasUseCandidate = msg.Attributes.Any(x => x.AttributeType == STUNAttributeTypesEnum.UseCandidate);
-                _logger.LogInformation($"STUN {msg.Header.MessageType} received from {ep}, use candidate {hasUseCandidate}.");
-                _logger.LogInformation($"MSG Type {msg.Header.MessageType }");
-                _logger.LogInformation($"HAS AUDIO { peerConnection.HasAudio }");
+                //_logger.LogInformation("{OnStunMessageReceived}");
+                //bool hasUseCandidate = msg.Attributes.Any(x => x.AttributeType == STUNAttributeTypesEnum.UseCandidate);
+                // _logger.LogInformation($"STUN {msg.Header.MessageType} received from {ep}, use candidate {hasUseCandidate}.");
+                // _logger.LogInformation($"MSG Type {msg.Header.MessageType }");
+                // _logger.LogInformation($"HAS AUDIO { peerConnection.HasAudio }");
             };
 
             peerConnection.GetRtpChannel().OnRTPDataReceived += (arg1, arg2, data) =>
             {
-                //_logger.LogInformation("{OnRTPDataReceived}");
+                //_logger.LogInformation("{GetRtpChannel().OnRTPDataReceived}");
+            };
+
+            peerConnection.GetRtpChannel().OnIceCandidate += (candidate) =>
+            {
+                _logger.LogInformation("{GetRtpChannel().OnIceCandidate}");
+                _logger.LogInformation(candidate.toJSON());
+            };
+
+            peerConnection.GetRtpChannel().OnIceCandidateError += (candidate, error) =>
+            {
+                _logger.LogInformation("{GetRtpChannel().OnIceCandidateError}");
+                _logger.LogInformation(error);
+                _logger.LogInformation(candidate.toJSON());
             };
 
             peerConnection.onicecandidateerror += (candidate, error) =>
