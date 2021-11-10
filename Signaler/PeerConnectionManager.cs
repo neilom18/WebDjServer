@@ -29,49 +29,14 @@ namespace Signaler
         private readonly IHubContext<WebRTCHub> _webRTCHub;
         private readonly ILogger<PeerConnectionManager> _logger;
         private ConcurrentDictionary<string, RTCPeerConnection> _peerConnections = new ConcurrentDictionary<string, RTCPeerConnection>();
+        private ConcurrentDictionary<string, List<RTCIceCandidate>> _candidates = new ConcurrentDictionary<string, List<RTCIceCandidate>>();
 
         private RTCConfiguration _config = new RTCConfiguration
         {
-            iceTransportPolicy = RTCIceTransportPolicy.all,
-            iceCandidatePoolSize = 5,
-            X_ICEIncludeAllInterfaceAddresses = true,
             iceServers = new List<RTCIceServer>
             {
                 new RTCIceServer { urls = "stun:stun1.l.google.com:19302" },
-                new RTCIceServer { urls = "stun:stun2.l.google.com:19302" },
-                new RTCIceServer { urls = "stun:stun3.l.google.com:19302" },
-                new RTCIceServer { urls = "stun:stun4.l.google.com:19302" },
-                new RTCIceServer { urls = "stun:stun.ekiga.net" },
-                new RTCIceServer { urls = "stun:stun.ideasip.com" },
                 new RTCIceServer
-                {
-                    urls = "turn:numb.viagenie.ca",
-                    credential = "muazkh",
-                    username = "webrtc@live.com",
-                    credentialType = RTCIceCredentialType.password
-                },
-                 new RTCIceServer
-                {
-                    urls = "turn:192.158.29.39:3478?transport=udp",
-                    credential = "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-                    username = "28224511:1379330808",
-                    credentialType = RTCIceCredentialType.password
-                },
-                  new RTCIceServer
-                {
-                    urls = "turn:192.158.29.39:3478?transport=tcp",
-                    credential = "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
-                    username = "28224511:1379330808",
-                    credentialType = RTCIceCredentialType.password
-                },
-                   new RTCIceServer
-                {
-                    urls = "turn:turn.bistri.com:80",
-                    credential = "homeo",
-                    username = "homeo",
-                    credentialType = RTCIceCredentialType.password
-                },
-                    new RTCIceServer
                 {
                     urls = "turn:turn.anyfirewall.com:443?transport=tcp",
                     credential = "webrtc",
@@ -177,6 +142,16 @@ namespace Signaler
             peerConnection.onicegatheringstatechange += (RTCIceGatheringState obj) =>
             {
                 _logger.LogInformation($"onicegatheringstatechange { obj }.");
+
+                if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
+                    peerConnection.signalingState == RTCSignalingState.have_remote_offer)
+                {
+                    var candidates = _candidates.Where(x => x.Key == id).SingleOrDefault().Value;
+                    foreach (var candidate in candidates)
+                    {
+                        _webRTCHub.Clients.All.SendAsync("IceCandidateResult", candidate).GetAwaiter().GetResult();
+                    }
+                }
             };
 
             peerConnection.OnSendReport += (media, sr) =>
@@ -194,7 +169,12 @@ namespace Signaler
                 if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
                     peerConnection.signalingState == RTCSignalingState.have_remote_offer)
                 {
-                    _webRTCHub.Clients.All.SendAsync("IceCandidateResult", candidate).GetAwaiter().GetResult();
+                    //   _webRTCHub.Clients.All.SendAsync("IceCandidateResult", candidate).GetAwaiter().GetResult();
+                    var candidatesList = _candidates.Where(x => x.Key == id).SingleOrDefault();
+                    if (candidatesList.Value is null)
+                        _candidates.TryAdd(id, new List<RTCIceCandidate> { candidate });
+                    else
+                        candidatesList.Value.Add(candidate);
                 }
             };
 
