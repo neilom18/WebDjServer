@@ -1,0 +1,12 @@
+C:\Repositorios\WebRTCServer\Mixer\bin\Debug\net5.0\Mixer.deps.json
+C:\Repositorios\WebRTCServer\Mixer\bin\Debug\net5.0\Mixer.dll
+C:\Repositorios\WebRTCServer\Mixer\bin\Debug\net5.0\ref\Mixer.dll
+C:\Repositorios\WebRTCServer\Mixer\bin\Debug\net5.0\Mixer.pdb
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\Mixer.csproj.AssemblyReference.cache
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\Mixer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\Mixer.AssemblyInfoInputs.cache
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\Mixer.AssemblyInfo.cs
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\Mixer.csproj.CoreCompileInputs.cache
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\Mixer.dll
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\ref\Mixer.dll
+C:\Repositorios\WebRTCServer\Mixer\obj\Debug\net5.0\Mixer.pdb

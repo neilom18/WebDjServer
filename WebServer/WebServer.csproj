@@ -10,7 +10,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RTCServer\RTCServer.csproj" />
     <ProjectReference Include="..\Signaler\Signaler.csproj" />
   </ItemGroup>
 

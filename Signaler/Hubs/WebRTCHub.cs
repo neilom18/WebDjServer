@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using SIPSorcery.Net;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

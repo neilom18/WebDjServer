@@ -9,4 +9,3 @@ C:\Repositorios\WebRTCServer\RTCServer\obj\Debug\net5.0\RTCServer.csproj.CoreCom
 C:\Repositorios\WebRTCServer\RTCServer\obj\Debug\net5.0\RTCServer.dll
 C:\Repositorios\WebRTCServer\RTCServer\obj\Debug\net5.0\ref\RTCServer.dll
 C:\Repositorios\WebRTCServer\RTCServer\obj\Debug\net5.0\RTCServer.pdb
-C:\Repositorios\WebRTCServer\RTCServer\obj\Debug\net5.0\RTCServer.csproj.AssemblyReference.cache

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "JjTOM8uGQYn6RK9HF3t4iUoPxeepD17AVSzk2aXcgC5bLznRKomSms+4eqmE+u7F0oSXyRB9hRt5l4SNihlljQ==",
+  "dgSpecHash": "iFXiGvYcB0GZbV9A6jfrWGvlhcxMfvE+TSwnUegkIIF1CfYlG81BttF6Bsw1Y+2GAvOhm/Pka+3iUqnK+Oy7kA==",
   "success": true,
   "projectFilePath": "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj",
   "expectedPackageFiles": [

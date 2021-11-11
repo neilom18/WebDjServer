@@ -4,14 +4,14 @@
     "C:\\Repositorios\\WebRTCServer\\WebServer\\WebServer.csproj": {}
   },
   "projects": {
-    "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj": {
+    "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj",
-        "projectName": "RTCServer",
-        "projectPath": "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj",
+        "projectUniqueName": "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj",
+        "projectName": "Signaler",
+        "projectPath": "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj",
         "packagesPath": "C:\\Users\\PremierSoft\\.nuget\\packages\\",
-        "outputPath": "C:\\Repositorios\\WebRTCServer\\RTCServer\\obj\\",
+        "outputPath": "C:\\Repositorios\\WebRTCServer\\Signaler\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
@@ -43,76 +43,13 @@
         "net5.0": {
           "targetAlias": "net5.0",
           "dependencies": {
-            "SIPSorcery": {
-              "target": "Package",
-              "version": "[5.2.3, )"
-            }
-          },
-          "imports": [
-            "net461",
-            "net462",
-            "net47",
-            "net471",
-            "net472",
-            "net48"
-          ],
-          "assetTargetFallback": true,
-          "warn": true,
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.402\\RuntimeIdentifierGraph.json"
-        }
-      }
-    },
-    "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj": {
-      "version": "1.0.0",
-      "restore": {
-        "projectUniqueName": "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj",
-        "projectName": "Signaler",
-        "projectPath": "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj",
-        "packagesPath": "C:\\Users\\PremierSoft\\.nuget\\packages\\",
-        "outputPath": "C:\\Repositorios\\WebRTCServer\\Signaler\\obj\\",
-        "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-        ],
-        "configFilePaths": [
-          "C:\\Users\\PremierSoft\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
-        ],
-        "originalTargetFrameworks": [
-          "net5.0"
-        ],
-        "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "https://api.nuget.org/v3/index.json": {}
-        },
-        "frameworks": {
-          "net5.0": {
-            "targetAlias": "net5.0",
-            "projectReferences": {
-              "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj": {
-                "projectPath": "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj"
-              }
-            }
-          }
-        },
-        "warningProperties": {
-          "warnAsError": [
-            "NU1605"
-          ]
-        }
-      },
-      "frameworks": {
-        "net5.0": {
-          "targetAlias": "net5.0",
-          "dependencies": {
             "Microsoft.AspNetCore.SignalR.Core": {
               "target": "Package",
               "version": "[1.1.0, )"
+            },
+            "SIPSorcery": {
+              "target": "Package",
+              "version": "[5.2.3, )"
             }
           },
           "imports": [
@@ -161,9 +98,6 @@
           "net5.0": {
             "targetAlias": "net5.0",
             "projectReferences": {
-              "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj": {
-                "projectPath": "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj"
-              },
               "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj": {
                 "projectPath": "C:\\Repositorios\\WebRTCServer\\Signaler\\Signaler.csproj"
               }

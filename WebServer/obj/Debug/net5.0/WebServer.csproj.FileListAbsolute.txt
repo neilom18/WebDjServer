@@ -32,6 +32,7 @@ C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\staticwebassets\WebServe
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\staticwebassets\WebServer.StaticWebAssets.xml
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\scopedcss\bundle\WebServer.styles.css
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.RazorTargetAssemblyInfo.cache
+C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.csproj.CopyComplete
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.dll
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\ref\WebServer.dll
 C:\Repositorios\WebRTCServer\WebServer\obj\Debug\net5.0\WebServer.pdb

@@ -1290,19 +1290,6 @@
         "compile": {
           "ref/netstandard1.2/_._": {}
         }
-      },
-      "RTCServer/1.0.0": {
-        "type": "project",
-        "framework": ".NETCoreApp,Version=v5.0",
-        "dependencies": {
-          "SIPSorcery": "5.2.3"
-        },
-        "compile": {
-          "bin/placeholder/RTCServer.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/RTCServer.dll": {}
-        }
       }
     }
   },
@@ -4537,17 +4524,12 @@
         "system.threading.timer.4.3.0.nupkg.sha512",
         "system.threading.timer.nuspec"
       ]
-    },
-    "RTCServer/1.0.0": {
-      "type": "project",
-      "path": "../RTCServer/RTCServer.csproj",
-      "msbuildProject": "../RTCServer/RTCServer.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net5.0": [
       "Microsoft.AspNetCore.SignalR.Core >= 1.1.0",
-      "RTCServer >= 1.0.0"
+      "SIPSorcery >= 5.2.3"
     ]
   },
   "packageFolders": {
@@ -4580,11 +4562,7 @@
       "frameworks": {
         "net5.0": {
           "targetAlias": "net5.0",
-          "projectReferences": {
-            "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj": {
-              "projectPath": "C:\\Repositorios\\WebRTCServer\\RTCServer\\RTCServer.csproj"
-            }
-          }
+          "projectReferences": {}
         }
       },
       "warningProperties": {
@@ -4600,6 +4578,10 @@
           "Microsoft.AspNetCore.SignalR.Core": {
             "target": "Package",
             "version": "[1.1.0, )"
+          },
+          "SIPSorcery": {
+            "target": "Package",
+            "version": "[5.2.3, )"
           }
         },
         "imports": [

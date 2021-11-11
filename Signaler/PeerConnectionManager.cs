@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Signaler.Hubs;
 using Signaler.Models;
+using SIPSorcery.Media;
 using SIPSorcery.Net;
 using SIPSorceryMedia.Abstractions;
 using System.Collections.Concurrent;
@@ -64,13 +65,14 @@ namespace Signaler
             var peerConnection = new RTCPeerConnection(_config);
 
             // COM O OPUS NAO ESTA FUNCIONANDO AINDA
-            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
-            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000)) }, MediaStreamStatusEnum.SendRecv);
-
             var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
-                new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
+              new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000, 2)) }, MediaStreamStatusEnum.SendRecv);
+
+            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
+            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
 
             peerConnection.addTrack(audioTrack);
+
 
             peerConnection.OnAudioFormatsNegotiated += (audioFormats) =>
             {
@@ -224,7 +226,14 @@ namespace Signaler
                         //_logger.LogInformation("AUDIO DESTINATION ENDPOINT: " + user?.PeerConnection.AudioDestinationEndPoint);
                         //_logger.LogInformation("CONNECTION STATE: " + user?.PeerConnection.connectionState);
 
-                        user.PeerConnection?.SendAudio(pkt.Header.Timestamp, pkt.Payload);
+                        // RUIM
+                        //user.PeerConnection?.SendAudio(pkt.Header.Timestamp, pkt.Payload);
+
+                        // BOM
+                        user.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
+
+                        // RUIM
+                        //user.PeerConnection?.SendAudioFrame(pkt.Header.Timestamp, pkt.Header.PayloadType, pkt.Payload);
                     }
 
                     // FUNCIONAA
