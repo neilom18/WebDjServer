@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using Signaler.Hubs;
 using Signaler.Models;
-using SIPSorcery.Media;
 using SIPSorcery.Net;
 using SIPSorceryMedia.Abstractions;
 using System.Collections.Concurrent;
@@ -32,17 +31,21 @@ namespace Signaler
         private ConcurrentDictionary<string, RTCPeerConnection> _peerConnections = new ConcurrentDictionary<string, RTCPeerConnection>();
         private ConcurrentDictionary<string, List<RTCIceCandidate>> _candidates = new ConcurrentDictionary<string, List<RTCIceCandidate>>();
 
-        private RTCConfiguration _config = new RTCConfiguration
+        private static RTCConfiguration _config = new()
         {
+            X_UseRtpFeedbackProfile = true,
             iceServers = new List<RTCIceServer>
             {
-                new RTCIceServer { urls = "stun:stun1.l.google.com:19302" },
                 new RTCIceServer
                 {
-                    urls = "turn:turn.anyfirewall.com:443?transport=tcp",
-                    credential = "webrtc",
+                    urls = "stun:stun1.l.google.com:19302"
+                },
+                new RTCIceServer
+                {
                     username = "webrtc",
-                    credentialType = RTCIceCredentialType.password
+                    credential = "webrtc",
+                    credentialType = RTCIceCredentialType.password,
+                    urls = "turn:turn.anyfirewall.com:443?transport=tcp"
                 },
             }
         };
@@ -65,11 +68,14 @@ namespace Signaler
             var peerConnection = new RTCPeerConnection(_config);
 
             // COM O OPUS NAO ESTA FUNCIONANDO AINDA
-            var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
-              new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000, 2)) }, MediaStreamStatusEnum.SendRecv);
+            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
+            //  new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000, 2)) }, MediaStreamStatusEnum.SendRecv);
 
             //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
             //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
+
+            var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
+              new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000, 2, "minptime=10;useinbandfec=1;")) }, MediaStreamStatusEnum.SendRecv);
 
             peerConnection.addTrack(audioTrack);
 
@@ -106,16 +112,16 @@ namespace Signaler
 
             peerConnection.GetRtpChannel().OnStunMessageReceived += (msg, ep, isRelay) =>
             {
-                //_logger.LogInformation("{OnStunMessageReceived}");
-                //bool hasUseCandidate = msg.Attributes.Any(x => x.AttributeType == STUNAttributeTypesEnum.UseCandidate);
-                // _logger.LogInformation($"STUN {msg.Header.MessageType} received from {ep}, use candidate {hasUseCandidate}.");
-                // _logger.LogInformation($"MSG Type {msg.Header.MessageType }");
-                // _logger.LogInformation($"HAS AUDIO { peerConnection.HasAudio }");
+                _logger.LogInformation("{OnStunMessageReceived}");
+                bool hasUseCandidate = msg.Attributes.Any(x => x.AttributeType == STUNAttributeTypesEnum.UseCandidate);
+                _logger.LogInformation($"STUN {msg.Header.MessageType} received from {ep}, use candidate {hasUseCandidate}.");
+                _logger.LogInformation($"MSG Type {msg.Header.MessageType }");
+                _logger.LogInformation($"HAS AUDIO { peerConnection.HasAudio }");
             };
 
             peerConnection.GetRtpChannel().OnRTPDataReceived += (arg1, arg2, data) =>
             {
-                //_logger.LogInformation("{GetRtpChannel().OnRTPDataReceived}");
+                _logger.LogInformation("{GetRtpChannel().OnRTPDataReceived}");
             };
 
             peerConnection.GetRtpChannel().OnIceCandidate += (candidate) =>
@@ -158,7 +164,47 @@ namespace Signaler
 
             peerConnection.OnSendReport += (media, sr) =>
             {
-                _logger.LogInformation($"RTCP enviado para {media}\n{sr.GetDebugSummary()}");
+
+                _logger.LogInformation($"RTCP Send for {media}\n{sr.GetDebugSummary()}");
+
+                //if (sr.SenderReport != null)
+                //{
+                //    _logger.LogInformation("{JITTER SEND}");
+
+                //    sr.SenderReport.ReceptionReports.ForEach(a =>
+                //    {
+                //        _logger.LogInformation(a?.Jitter.ToString());
+                //    });
+
+                //    sr.SenderReport.ReceptionReports.ForEach(a =>
+                //    {
+                //        _logger.LogInformation(a?.Jitter.ToString());
+                //    });
+
+                //    _logger.LogInformation("{OnSendReport}");
+                //}                
+            };
+
+            peerConnection.OnReceiveReport += (System.Net.IPEndPoint arg1, SDPMediaTypesEnum arg2, RTCPCompoundPacket arg3) =>
+            {
+
+                _logger.LogInformation($"RTCP Receive  for {arg2}\n{arg3.GetDebugSummary()}");
+                //if (arg3.ReceiverReport != null)
+                //{
+                //    _logger.LogInformation("{JITTER RECEIVE}");
+
+                //    arg3.ReceiverReport.ReceptionReports.ForEach(a =>
+                //    {
+                //        _logger.LogInformation(a?.Jitter.ToString());
+                //    });
+
+                //    arg3.ReceiverReport.ReceptionReports.ForEach(a =>
+                //    {
+                //        _logger.LogInformation(a?.Jitter.ToString());
+                //    });
+
+                //    _logger.LogInformation("{OnReceiveReport}");
+                //}                
             };
 
             peerConnection.OnRtcpBye += (reason) =>
@@ -171,7 +217,6 @@ namespace Signaler
                 if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
                     peerConnection.signalingState == RTCSignalingState.have_remote_offer)
                 {
-                    //   _webRTCHub.Clients.All.SendAsync("IceCandidateResult", candidate).GetAwaiter().GetResult();
                     var candidatesList = _candidates.Where(x => x.Key == id).SingleOrDefault();
                     if (candidatesList.Value is null)
                         _candidates.TryAdd(id, new List<RTCIceCandidate> { candidate });
@@ -208,40 +253,10 @@ namespace Signaler
         {
             peerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
             {
-                //_logger.LogInformation("{OnRtpPacketReceived}");
-                //_logger.LogInformation("EXISTEM USUARIOS DE RELAY: " + usersToRelay.Any());
-
                 if (media == SDPMediaTypesEnum.audio)
                 {
-                    //_logger.LogInformation("RECEBENDO AUDIO DE: " + connectionId);
-
-                    // MANDAR O AUDIO PRA TODO MUNDO MENOS O FALANTE
-                    foreach (var user in usersToRelay.Where(u => u.Id != connectionId))
-                    {
-                        //_logger.LogInformation("ENVIANDO AUDIO PARA: " + user.Username);
-
-                        //_logger.LogInformation("REMOTE TRACK: " + user?.PeerConnection.AudioRemoteTrack);
-                        //_logger.LogInformation("LOCAL TRACK: " + user?.PeerConnection.AudioLocalTrack);
-
-                        //_logger.LogInformation("AUDIO DESTINATION ENDPOINT: " + user?.PeerConnection.AudioDestinationEndPoint);
-                        //_logger.LogInformation("CONNECTION STATE: " + user?.PeerConnection.connectionState);
-
-                        // RUIM
-                        //user.PeerConnection?.SendAudio(pkt.Header.Timestamp, pkt.Payload);
-
-                        // BOM
+                    foreach (var user in usersToRelay)
                         user.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
-
-                        // RUIM
-                        //user.PeerConnection?.SendAudioFrame(pkt.Header.Timestamp, pkt.Header.PayloadType, pkt.Payload);
-                    }
-
-                    // FUNCIONAA
-                    //peerConnection.SendAudio(pkt.Header.Timestamp, pkt.Payload);
-
-                    // NAO FUNCIONA
-                    //rtpSession.SendRtpRaw(media, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
-                    //rtpSession.SendAudio(1, pkt.Payload);
                 }
             };
         }
