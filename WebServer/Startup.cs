@@ -28,6 +28,7 @@ namespace WebServer
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
                 });
 
+            services.AddSingleton<Mixer>();
             services.AddSingleton<IRoomManager, RoomManager>();
             services.AddSingleton<IUserManager, UserManager>();
             services.AddSingleton<IPeerConnectionManager, PeerConnectionManager>();

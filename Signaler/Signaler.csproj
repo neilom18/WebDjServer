@@ -1,13 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
 	  <Nulabble>Enable</Nulabble>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Concentus" Version="1.1.7" />
+    <PackageReference Include="Concentus.OggFile" Version="1.0.4" />
     <PackageReference Include="FFMpegCore" Version="4.6.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.1.0" />
+    <PackageReference Include="NAudio" Version="2.0.1" />
     <PackageReference Include="SIPSorcery" Version="5.2.3" />
   </ItemGroup>
 

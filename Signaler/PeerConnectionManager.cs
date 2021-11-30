@@ -1,13 +1,21 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Concentus.Oggfile;
+using Concentus.Structs;
+using FFMpegCore;
+using FFMpegCore.Pipes;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using NAudio.Wave;
 using Signaler.Hubs;
 using Signaler.Models;
 using SIPSorcery.Net;
 using SIPSorceryMedia.Abstractions;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Signaler
@@ -28,8 +36,17 @@ namespace Signaler
     {
         private readonly IHubContext<WebRTCHub> _webRTCHub;
         private readonly ILogger<PeerConnectionManager> _logger;
-        private ConcurrentDictionary<string, RTCPeerConnection> _peerConnections = new ConcurrentDictionary<string, RTCPeerConnection>();
-        private ConcurrentDictionary<string, List<RTCIceCandidate>> _candidates = new ConcurrentDictionary<string, List<RTCIceCandidate>>();
+
+
+        private readonly Mixer _mixer;
+        private readonly Opusenc _opusenc = new Opusenc();
+        private readonly Opusdec _opudec = new Opusdec();
+
+        private int i = 0;
+        private readonly object _lock = new { };
+
+        private ConcurrentDictionary<string, List<RTCIceCandidate>> _candidates = new();
+        private ConcurrentDictionary<string, RTCPeerConnection> _peerConnections = new();
 
         private static RTCConfiguration _config = new()
         {
@@ -50,107 +67,80 @@ namespace Signaler
             }
         };
 
+
+        private static FFOptions options = new()
+        {
+            UseCache = true,
+            TemporaryFilesFolder = @"C:\temp",
+            BinaryFolder = @"C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin",
+        };
+
         public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub)
         {
-            _logger = logger ?? throw new System.ArgumentNullException(nameof(logger));
-            _webRTCHub = webRTCHub ?? throw new System.ArgumentNullException(nameof(webRTCHub));
-
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _webRTCHub = webRTCHub ?? throw new ArgumentNullException(nameof(webRTCHub));
             _peerConnections ??= new ConcurrentDictionary<string, RTCPeerConnection>();
         }
 
-        /// <summary>
-        ///     Instantiate the RTCPeerConnection instance,
-        ///     Add the audio and/or video tracks as required,
-        ///     Call the createOffer method to acquire an SDP offer that can be sent to the remote peer,
-        /// </summary>
         public async Task<RTCSessionDescriptionInit> CreateServerOffer(string id)
         {
             var peerConnection = new RTCPeerConnection(_config);
 
-            // COM O OPUS NAO ESTA FUNCIONANDO AINDA
-            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
-            //  new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000, 2)) }, MediaStreamStatusEnum.SendRecv);
-
-            //var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
-            //    new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
-
             var audioTrack = new MediaStreamTrack(SDPMediaTypesEnum.audio, false,
-              new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000, 2, "minptime=10;useinbandfec=1;")) }, MediaStreamStatusEnum.SendRecv);
+              //new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(new AudioFormat(AudioCodecsEnum.OPUS, 111, 48000, 2, "minptime=20;maxptime=50;useinbandfec=1;")) }, MediaStreamStatusEnum.SendRecv);
+              new List<SDPAudioVideoMediaFormat> { new SDPAudioVideoMediaFormat(SDPWellKnownMediaFormatsEnum.PCMU) }, MediaStreamStatusEnum.SendRecv);
 
             peerConnection.addTrack(audioTrack);
 
-
             peerConnection.OnAudioFormatsNegotiated += (audioFormats) =>
             {
-                _logger.LogInformation("{OnAudioFormatsNegotiated}");
             };
 
             peerConnection.OnTimeout += (mediaType) =>
             {
-                _logger.LogInformation("{OnTimeout}");
-                _logger.LogWarning($"Timeout for {mediaType}.");
             };
 
             peerConnection.ondatachannel += (rdc) =>
             {
-                _logger.LogInformation("{ondatachannel}");
                 rdc.onopen += () =>
                 {
-                    _logger.LogInformation($"Data channel {rdc.label} opened.");
                 };
 
                 rdc.onclose += () =>
                 {
-                    _logger.LogInformation($"Data channel {rdc.label} closed.");
                 };
 
                 rdc.onmessage += (datachan, type, data) =>
                 {
-                    _logger.LogInformation(datachan.label);
                 };
             };
 
             peerConnection.GetRtpChannel().OnStunMessageReceived += (msg, ep, isRelay) =>
             {
-                _logger.LogInformation("{OnStunMessageReceived}");
-                bool hasUseCandidate = msg.Attributes.Any(x => x.AttributeType == STUNAttributeTypesEnum.UseCandidate);
-                _logger.LogInformation($"STUN {msg.Header.MessageType} received from {ep}, use candidate {hasUseCandidate}.");
-                _logger.LogInformation($"MSG Type {msg.Header.MessageType }");
-                _logger.LogInformation($"HAS AUDIO { peerConnection.HasAudio }");
             };
 
             peerConnection.GetRtpChannel().OnRTPDataReceived += (arg1, arg2, data) =>
             {
-                _logger.LogInformation("{GetRtpChannel().OnRTPDataReceived}");
             };
 
             peerConnection.GetRtpChannel().OnIceCandidate += (candidate) =>
             {
-                _logger.LogInformation("{GetRtpChannel().OnIceCandidate}");
-                _logger.LogInformation(candidate.toJSON());
             };
 
             peerConnection.GetRtpChannel().OnIceCandidateError += (candidate, error) =>
             {
-                _logger.LogInformation("{GetRtpChannel().OnIceCandidateError}");
-                _logger.LogInformation(error);
-                _logger.LogInformation(candidate.toJSON());
             };
 
             peerConnection.onicecandidateerror += (candidate, error) =>
             {
-                _logger.LogInformation($"Erro ao adicionar um 'ICE Candidate remoto'. {error} {candidate}");
             };
 
             peerConnection.oniceconnectionstatechange += (state) =>
             {
-                _logger.LogInformation($"Alterando o status da conexão do 'ICE Candidate' para {state}.");
             };
 
             peerConnection.onicegatheringstatechange += (RTCIceGatheringState obj) =>
             {
-                _logger.LogInformation($"onicegatheringstatechange { obj }.");
-
                 if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
                     peerConnection.signalingState == RTCSignalingState.have_remote_offer)
                 {
@@ -164,52 +154,14 @@ namespace Signaler
 
             peerConnection.OnSendReport += (media, sr) =>
             {
-
-                _logger.LogInformation($"RTCP Send for {media}\n{sr.GetDebugSummary()}");
-
-                //if (sr.SenderReport != null)
-                //{
-                //    _logger.LogInformation("{JITTER SEND}");
-
-                //    sr.SenderReport.ReceptionReports.ForEach(a =>
-                //    {
-                //        _logger.LogInformation(a?.Jitter.ToString());
-                //    });
-
-                //    sr.SenderReport.ReceptionReports.ForEach(a =>
-                //    {
-                //        _logger.LogInformation(a?.Jitter.ToString());
-                //    });
-
-                //    _logger.LogInformation("{OnSendReport}");
-                //}                
             };
 
             peerConnection.OnReceiveReport += (System.Net.IPEndPoint arg1, SDPMediaTypesEnum arg2, RTCPCompoundPacket arg3) =>
             {
-
-                _logger.LogInformation($"RTCP Receive  for {arg2}\n{arg3.GetDebugSummary()}");
-                //if (arg3.ReceiverReport != null)
-                //{
-                //    _logger.LogInformation("{JITTER RECEIVE}");
-
-                //    arg3.ReceiverReport.ReceptionReports.ForEach(a =>
-                //    {
-                //        _logger.LogInformation(a?.Jitter.ToString());
-                //    });
-
-                //    arg3.ReceiverReport.ReceptionReports.ForEach(a =>
-                //    {
-                //        _logger.LogInformation(a?.Jitter.ToString());
-                //    });
-
-                //    _logger.LogInformation("{OnReceiveReport}");
-                //}                
             };
 
             peerConnection.OnRtcpBye += (reason) =>
             {
-                _logger.LogInformation($"RTCP BYE recebido, reason: {(string.IsNullOrWhiteSpace(reason) ? "<none>" : reason)}.");
             };
 
             peerConnection.onicecandidate += (candidate) =>
@@ -227,9 +179,6 @@ namespace Signaler
 
             peerConnection.onconnectionstatechange += (state) =>
             {
-                _logger.LogInformation("{onconnectionstatechange}");
-                _logger.LogDebug($"Peer connection {id} state changed to {state}.");
-
                 if (state == RTCPeerConnectionState.closed || state == RTCPeerConnectionState.disconnected || state == RTCPeerConnectionState.failed)
                 {
                     _peerConnections.TryRemove(id, out _);
@@ -255,6 +204,28 @@ namespace Signaler
             {
                 if (media == SDPMediaTypesEnum.audio)
                 {
+                    try
+                    {
+                        if (i >= 150)
+                        {
+                            var waveFormat = WaveFormat.CreateMuLawFormat(48000, 2);
+                            var ms = new MemoryStream(pkt.Payload);
+                            var provider = new RawSourceWaveStream(ms, waveFormat);
+                            using (var pcmStream = WaveFormatConversionStream.CreatePcmStream(provider))
+                            {
+                                WaveFileWriter.CreateWaveFile(Path.Combine(Directory.GetCurrentDirectory(), $"pkt-{DateTime.Now.ToFileTime()}.wav"), pcmStream);
+                            }
+
+                            lock(_lock) i = 0;
+                        }
+                        else
+                            lock (_lock) i++;
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e.ToString());
+                    }
+
                     foreach (var user in usersToRelay)
                         user.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
                 }
@@ -308,3 +279,80 @@ namespace Signaler
         }
     }
 }
+
+
+
+
+//_opudec.DecodeRawAudio(pkt.Payload);
+//_opusenc.EncodeRawAudioPacket(pkt.Payload);
+
+//    //var encoder = OpusEncoder.Create(48000, 1, Concentus.Enums.OpusApplication.OPUS_APPLICATION_VOIP);
+//    //encoder.EnableAnalysis = true;
+//    //encoder.Bitrate = (64 * 1024);
+//    //encoder.Complexity = 5;
+//    //encoder.PacketLossPercent = 0;
+//    //encoder.UseInbandFEC = true;
+//    //encoder.UseVBR = false;
+//    //encoder.UseConstrainedVBR = false;
+
+//    //var outStream = new MemoryStream();
+//    //var oggin = new OpusOggWriteStream(encoder, outStream);
+//    //lock(_lock)
+//    //{
+//    //    var audioStream = new MemoryStream(pkt.Payload, 28, pkt.Payload.Length - 28, true, true);
+//    //    using var fl = File.Create(@$"C:\temp\{i}.opus");
+//    //    fl.Write(audioStream.GetBuffer(), 0, (int)audioStream.Length);
+//    //    fl.Close();
+//    //    i++;
+//    //}
+
+//    //var outStream = new MemoryStream();
+//    //var mediaAnalisys = FFProbe.Analyse(audioStream, int.MaxValue, options);
+//    //audioStream.Position = 0;
+
+//    //FFMpegArguments
+//    //    .FromPipeInput(new StreamPipeSource(audioStream), options =>
+//    //    {
+//    //        //options.WithAudioCodec("OPUS");
+//    //        //options.WithDuration(mediaAnalisys.Duration);
+//    //    })
+//    //    //.AddPipeInput(new StreamPipeSource(audioStream2), options =>
+//    //    //{
+//    //    //    options.WithDuration(durationAudio2);
+//    //    //})
+//    //    .OutputToPipe(new StreamPipeSink(outStream), options =>
+//    //    {
+//    //        options.ForceFormat("mp3");
+//    //        //options.WithCustomArgument(@"-filter_complex amerge=inputs=2 -ac 2");
+//    //    })
+//    //    .NotifyOnOutput((str, dt) =>
+//    //    {
+//    //        _logger.LogInformation(str);
+//    //    })
+//    //    .ProcessSynchronously(true, options);
+
+//    //using (var fileIn = new MemoryStream(pkt.Payload))
+//    //using (var pcmStream = new MemoryStream())
+//    //{
+//    //var decoder = opusdecoder.create(48000, 1);
+//    //var oggin = new opusoggreadstream(decoder, filein);
+
+//    //    while (oggIn.HasNextPacket)
+//    //    {
+//    //        short[] packet = oggIn.DecodeNextPacket();
+//    //        if (packet != null)
+//    //        {
+//    //            for (int i = 0; i < packet.Length; i++)
+//    //            {
+//    //                var bytes = BitConverter.GetBytes(packet[i]);
+//    //                pcmStream.Write(bytes, 0, bytes.Length);
+//    //            }
+//    //        }
+//    //    }
+
+//    //    pcmStream.Position = 0;
+
+//    //    var wavStream = new RawSourceWaveStream(pcmStream, new WaveFormat(48000, 1));
+//    //    var sampleProvider = wavStream.ToSampleProvider();
+//    //    WaveFileWriter.CreateWaveFile16(Path.Combine(Directory.GetCurrentDirectory(), "AAAAAAAAAAAAAA.wav"), sampleProvider);
+//    //}
