@@ -17,6 +17,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using static Signaler.Mixer;
 
 namespace Signaler
 {
@@ -75,11 +76,14 @@ namespace Signaler
             BinaryFolder = @"C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin",
         };
 
-        public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub)
+        public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub, Mixer mixer)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _webRTCHub = webRTCHub ?? throw new ArgumentNullException(nameof(webRTCHub));
             _peerConnections ??= new ConcurrentDictionary<string, RTCPeerConnection>();
+            _mixer = mixer;
+
+            Task.Run(_mixer.StartAudioProcess);
         }
 
         public async Task<RTCSessionDescriptionInit> CreateServerOffer(string id)
@@ -92,53 +96,6 @@ namespace Signaler
 
             peerConnection.addTrack(audioTrack);
 
-            peerConnection.OnAudioFormatsNegotiated += (audioFormats) =>
-            {
-            };
-
-            peerConnection.OnTimeout += (mediaType) =>
-            {
-            };
-
-            peerConnection.ondatachannel += (rdc) =>
-            {
-                rdc.onopen += () =>
-                {
-                };
-
-                rdc.onclose += () =>
-                {
-                };
-
-                rdc.onmessage += (datachan, type, data) =>
-                {
-                };
-            };
-
-            peerConnection.GetRtpChannel().OnStunMessageReceived += (msg, ep, isRelay) =>
-            {
-            };
-
-            peerConnection.GetRtpChannel().OnRTPDataReceived += (arg1, arg2, data) =>
-            {
-            };
-
-            peerConnection.GetRtpChannel().OnIceCandidate += (candidate) =>
-            {
-            };
-
-            peerConnection.GetRtpChannel().OnIceCandidateError += (candidate, error) =>
-            {
-            };
-
-            peerConnection.onicecandidateerror += (candidate, error) =>
-            {
-            };
-
-            peerConnection.oniceconnectionstatechange += (state) =>
-            {
-            };
-
             peerConnection.onicegatheringstatechange += (RTCIceGatheringState obj) =>
             {
                 if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
@@ -150,18 +107,6 @@ namespace Signaler
                         _webRTCHub.Clients.All.SendAsync("IceCandidateResult", candidate).GetAwaiter().GetResult();
                     }
                 }
-            };
-
-            peerConnection.OnSendReport += (media, sr) =>
-            {
-            };
-
-            peerConnection.OnReceiveReport += (System.Net.IPEndPoint arg1, SDPMediaTypesEnum arg2, RTCPCompoundPacket arg3) =>
-            {
-            };
-
-            peerConnection.OnRtcpBye += (reason) =>
-            {
             };
 
             peerConnection.onicecandidate += (candidate) =>
@@ -189,12 +134,9 @@ namespace Signaler
                 }
             };
 
-            await peerConnection.createDataChannel("channel");
             var offerSdp = peerConnection.createOffer(null);
             await peerConnection.setLocalDescription(offerSdp);
-
             _peerConnections.TryAdd(id, peerConnection);
-
             return offerSdp;
         }
 
@@ -206,29 +148,22 @@ namespace Signaler
                 {
                     try
                     {
-                        if (i >= 150)
-                        {
-                            var waveFormat = WaveFormat.CreateMuLawFormat(48000, 2);
-                            var ms = new MemoryStream(pkt.Payload);
-                            var provider = new RawSourceWaveStream(ms, waveFormat);
-                            using (var pcmStream = WaveFormatConversionStream.CreatePcmStream(provider))
-                            {
-                                WaveFileWriter.CreateWaveFile(Path.Combine(Directory.GetCurrentDirectory(), $"pkt-{DateTime.Now.ToFileTime()}.wav"), pcmStream);
-                            }
-
-                            lock(_lock) i = 0;
-                        }
-                        else
-                            lock (_lock) i++;
+                        _mixer.AddRawPacket(pkt);
+                        _mixer.AddRawPacket(pkt.Payload);
                     }
                     catch (Exception e)
                     {
                         _logger.LogError(e.ToString());
                     }
 
-                    foreach (var user in usersToRelay)
-                        user.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
+                    //foreach (var user in usersToRelay)
+                    //    user.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
                 }
+            };
+
+            _mixer.HasAudioData += (object e, TesteEventArgs args) =>
+            {              
+                peerConnection.SendRtpRaw(SDPMediaTypesEnum.audio, args.bytes, args.Timestamp, 0, 0);
             };
         }
 
@@ -276,6 +211,19 @@ namespace Signaler
             var pc = _peerConnections.Where(p => p.Key == id).SingleOrDefault();
             if (pc.Value != null) return pc.Value;
             return null;
+        }
+    }
+
+    public static class StreamExtension
+    {
+        public static byte[] ToArray(this Stream stream)
+        {
+            byte[] buffer = new byte[4096];
+            int reader = 0;
+            MemoryStream memoryStream = new MemoryStream();
+            while ((reader = stream.Read(buffer, 0, buffer.Length)) != 0)
+                memoryStream.Write(buffer, 0, reader);
+            return memoryStream.ToArray();
         }
     }
 }
