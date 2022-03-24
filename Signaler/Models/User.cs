@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using SIPSorcery.Net;
 using System;
+using System.Collections.Generic;
 
 namespace Signaler.Models
 {
@@ -37,9 +38,16 @@ namespace Signaler.Models
         public bool IsInCall { get; set; }
 
         /// <summary>
-        ///     A sala que o usuário está participando
+        ///     Indica a sala principal do usuário
         /// </summary>
-        public virtual Room? Room { get; set; }
+
+        public Room? MainRoom { get; set; }
+
+        // <summary>
+        //      Indica as salas secundárias do usuário
+        // </summary>
+
+        public IList<Room> SideRooms { get; set; }
 
         /// <summary>
         ///     Peer connection vinculada ao usuario

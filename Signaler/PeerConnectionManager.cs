@@ -37,7 +37,8 @@ namespace Signaler
     {
         private readonly IHubContext<WebRTCHub> _webRTCHub;
         private readonly ILogger<PeerConnectionManager> _logger;
-
+        private readonly IUserManager _userManager;
+        private readonly IRoomManager _roomManager;
 
         private readonly Mixer _mixer;
         private readonly Opusenc _opusenc = new Opusenc();
@@ -76,17 +77,19 @@ namespace Signaler
             BinaryFolder = @"C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin",
         };
 
-        public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub, Mixer mixer)
+        public PeerConnectionManager(ILogger<PeerConnectionManager> logger, IHubContext<WebRTCHub> webRTCHub, IUserManager userManager, Mixer mixer, IRoomManager roomManager)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _webRTCHub = webRTCHub ?? throw new ArgumentNullException(nameof(webRTCHub));
             _peerConnections ??= new ConcurrentDictionary<string, RTCPeerConnection>();
-            _mixer = mixer;
+            _userManager ??= userManager;
+            _mixer ??= mixer;
+            _roomManager ??= roomManager;
 
             Task.Run(_mixer.StartAudioProcess);
         }
 
-        public async Task<RTCSessionDescriptionInit> CreateServerOffer(string id)
+        public async Task<RTCSessionDescriptionInit> CreateServerOffer(User user)
         {
             var peerConnection = new RTCPeerConnection(_config);
 
@@ -101,7 +104,7 @@ namespace Signaler
                 if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
                     peerConnection.signalingState == RTCSignalingState.have_remote_offer)
                 {
-                    var candidates = _candidates.Where(x => x.Key == id).SingleOrDefault().Value;
+                    var candidates = _candidates.Where(x => x.Key == user.Id).SingleOrDefault().Value;
                     foreach (var candidate in candidates)
                     {
                         _webRTCHub.Clients.All.SendAsync("IceCandidateResult", candidate).GetAwaiter().GetResult();
@@ -114,9 +117,9 @@ namespace Signaler
                 if (peerConnection.signalingState == RTCSignalingState.have_local_offer ||
                     peerConnection.signalingState == RTCSignalingState.have_remote_offer)
                 {
-                    var candidatesList = _candidates.Where(x => x.Key == id).SingleOrDefault();
+                    var candidatesList = _candidates.Where(x => x.Key == user.Id).SingleOrDefault();
                     if (candidatesList.Value is null)
-                        _candidates.TryAdd(id, new List<RTCIceCandidate> { candidate });
+                        _candidates.TryAdd(user.Id, new List<RTCIceCandidate> { candidate });
                     else
                         candidatesList.Value.Add(candidate);
                 }
@@ -126,7 +129,7 @@ namespace Signaler
             {
                 if (state == RTCPeerConnectionState.closed || state == RTCPeerConnectionState.disconnected || state == RTCPeerConnectionState.failed)
                 {
-                    _peerConnections.TryRemove(id, out _);
+                    _peerConnections.TryRemove(user.Id, out _);
                 }
                 else if (state == RTCPeerConnectionState.connected)
                 {
@@ -136,34 +139,37 @@ namespace Signaler
 
             var offerSdp = peerConnection.createOffer(null);
             await peerConnection.setLocalDescription(offerSdp);
-            _peerConnections.TryAdd(id, peerConnection);
+            _peerConnections.TryAdd(user.Id, peerConnection);
             return offerSdp;
         }
 
-        public void SetAudioRelay(RTCPeerConnection peerConnection, string connectionId, IList<User> usersToRelay)
+        public void SetAudioRelay(User user)
         {
-            peerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
+            user.PeerConnection.OnRtpPacketReceived += (rep, media, pkt) =>
             {
                 if (media == SDPMediaTypesEnum.audio)
                 {
                     try
                     {
                         _mixer.AddRawPacket(pkt);
-                        _mixer.AddRawPacket(pkt.Payload);
+                        //_mixer.AddRawPacket(pkt.Payload);
                     }
                     catch (Exception e)
                     {
                         _logger.LogError(e.ToString());
                     }
 
-                    //foreach (var user in usersToRelay)
-                    //    user.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
+                    /*var usersToRelay = _roomManager.GetAll().Where(r => r.Id == user.MainRoom.Id).Select(u => u.Users).SingleOrDefault().ToList();
+                    foreach (var receiverUser in usersToRelay)
+                    {
+                        if(user.Id == receiverUser.Id) continue;
+                        receiverUser.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
+                    }*/
+                    _mixer.HasAudioData += (object e, TesteEventArgs args) =>
+                    {
+                        user.PeerConnection.SendRtpRaw(SDPMediaTypesEnum.audio, args.bytes,pkt.Header.Timestamp, 0, 0);
+                    };
                 }
-            };
-
-            _mixer.HasAudioData += (object e, TesteEventArgs args) =>
-            {              
-                peerConnection.SendRtpRaw(SDPMediaTypesEnum.audio, args.bytes, args.Timestamp, 0, 0);
             };
         }
 

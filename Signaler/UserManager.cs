@@ -29,7 +29,8 @@ namespace Signaler
             {
                 Id = Guid.NewGuid().ToString(),
                 ConnectionId = connectionId,
-                Username = username
+                Username = username,
+                SideRooms = new List<Room>()
             };
 
             return _users.TryAdd(user.Id, user) ? user : null;

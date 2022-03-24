@@ -48,9 +48,9 @@ namespace Signaler.Hubs
         public override Task OnDisconnectedAsync(Exception exception)
         {
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
-            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
-            room.RemoveUser(user);
-            user.Room = null;
+            var rooms = _roomManager.GetAll().Where(r => r.Users.Any(u => u == user));
+            foreach (var room in rooms)
+                room.RemoveUser(user);
             _userManager.Delete(user.Id);
             _logger.LogInformation("Conexão no Hub RTC finalizada! {0} | {1}", Context.ConnectionId, exception?.ToString() ?? string.Empty);
 
@@ -71,18 +71,42 @@ namespace Signaler.Hubs
         }
 
         /// <summary>
-        ///     Entra em uma sala
+        ///     Seleciona a sala principal
         /// </summary>
-        public async Task JoinRoom(string roomId)
+        public void SetMainRoom(string roomId)
         {
-            var room = _roomManager.GetAll().Where(r => r.Id == roomId).Single();
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
-            room.AddUser(user);
-            user.Room = room;
+            var room = _roomManager.GetAll().Where(r => r.Id == roomId).Single();
+            if (user.MainRoom != room)
+                user.MainRoom = room;
+        }
+
+        /// <summary>
+        ///     Adiciona uma sala secundária
+        /// </summary>
+        public void SetSideRoom(string roomId)
+        {
+            var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            var room = _roomManager.GetAll().Where(r => r.Id == roomId).Single();
+            if (!user.SideRooms.Any(r => r == room))
+                user.SideRooms.Add(room);
+        }
+
+        /// <summary>
+        ///     Entra nas salas selecionadas
+        /// </summary>
+        public async Task JoinRoom()
+        {
+            var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            var rooms = _roomManager.GetAll().Where(r => r.Id == user.MainRoom?.Id || user.SideRooms.Any(u => u.Id == r.Id)).ToList();
+            foreach (var room in rooms)
+            {
+                room.AddUser(user);
+                await Groups.AddToGroupAsync(user.ConnectionId, room.Id);
+                await Clients.Caller.SendAsync("JoinedRoom", room.Id);
+                await Clients.Group(room.Id).SendAsync("UserJoinedRoom", user.Username);
+            }
             user.IsInCall = true;
-            await Groups.AddToGroupAsync(user.ConnectionId, room.Id);
-            await Clients.Caller.SendAsync("JoinedRoom", room.Id);
-            await Clients.Group(roomId).SendAsync("UserJoinedRoom", user.Username);
             await NotifyRoomUpdates();
             await NotifyUpdateUsers();
         }
@@ -95,11 +119,10 @@ namespace Signaler.Hubs
             var room = _roomManager.GetAll().Where(r => r.Id == roomId).Single();
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
             room.RemoveUser(user);
-            user.Room = null;
             user.IsInCall = false;
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.Id);
-            await Clients.Caller.SendAsync("ExitedRoom");
-            await Clients.Group(roomId).SendAsync("UserExitedRoom", user.Username);
+            //await Clients.Caller.SendAsync("ExitedRoom");
+            //await Clients.Group(roomId).SendAsync("UserExitedRoom", user.Username);
             await NotifyRoomUpdates();
             await NotifyUpdateUsers();
         }
@@ -155,10 +178,9 @@ namespace Signaler.Hubs
         public async Task<RTCSessionDescriptionInit> GetServerOffer()
         {
             var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
-            var room = _roomManager.GetAll().Where(r => r.Id == user.Room.Id).Single();
-            var offer = await _peerConnectionManager.CreateServerOffer(user.Id);
+            var offer = await _peerConnectionManager.CreateServerOffer(user);
             user.PeerConnection = _peerConnectionManager.Get(user.Id);
-            _peerConnectionManager.SetAudioRelay(user.PeerConnection, user.Id, room.Users);
+            _peerConnectionManager.SetAudioRelay(user);
             return offer;
         }
 

@@ -4,7 +4,12 @@ using SIPSorcery.Net;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
+using Org.BouncyCastle.Crypto.Generators;
 
 namespace Signaler
 {
@@ -12,16 +17,19 @@ namespace Signaler
     {
         private readonly ILogger<Mixer> _logger;
 
-        private uint _timestamp;
         private Stream _audioBuffer;
         private ConcurrentQueue<RTPPacket> _queue;
+        //private System.Timers.Timer _timer;
+        private byte[] _bytes;
 
         public Mixer(ILogger<Mixer> logger)
         {
             _logger = logger;
             _audioBuffer = new MemoryStream();
             _queue = new ConcurrentQueue<RTPPacket>();
-            _timestamp = 1234587;
+            _bytes = new byte[1024 * 1024];
+            //_timer = new System.Timers.Timer(100);
+            //_timestamp = 1234587;
         }
 
         /// <summary>
@@ -35,38 +43,63 @@ namespace Signaler
         public void AddRawPacket(RTPPacket pk)
         {
             _queue.Enqueue(pk);
+            if (_queue.Count > 10)
+                ProcessRTPPacket();
         }
+
 
         public void StartAudioProcess()
         {
-            Task.Run(ProcessAudio);
-            Task.Run(ProcessRTPPacket);
+            var timer = new System.Timers.Timer(20);
+            timer.AutoReset = true;
+            timer.Enabled = true;
+            timer.Elapsed += Timer_Elapsed;
+            timer.Start();
+            //Task.Run(ProcessAudio);
+            //Task.Run(ProcessRTPPacket);
+        }
+
+        private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            ProcessRTPPacket();
+        }
+
+        private void ProcessRTPPackets()
+        {
+
+
+
+            while (true)
+            {
+                Task.Delay(100);
+                if (_queue.Count >= 5)
+                {
+                    ProcessRTPPacket();
+                }
+            }
         }
 
         private void ProcessRTPPacket()
         {
-            while (true)
+            if (_queue.IsEmpty) return;
+            try
             {
-                Task.Delay(10);
-
-                if (!_queue.IsEmpty)
+                using var tmpStream = new MemoryStream();
+                while (_queue.TryDequeue(out var pkt))
                 {
-                    try
-                    {
-                        using var tmpStream = new MemoryStream();
-                        while (_queue.TryDequeue(out var pkt))
-                            tmpStream.Write(pkt.Payload, 0, pkt.Payload.Length);
-                        var waveFormat = WaveFormat.CreateMuLawFormat(8000, 1);
+                    tmpStream.Write(pkt.Payload, 0, 160);
+                }
+
+                tmpStream.Seek(0, SeekOrigin.Begin);
+                _bytes = tmpStream.ToArray();
+                HasAudioData.Invoke(this, new TesteEventArgs { bytes = _bytes });
+                /*var waveFormat = WaveFormat.CreateMuLawFormat(8000, 1);
                         var reader = new RawSourceWaveStream(tmpStream, waveFormat);
                         using var convertedStream = WaveFormatConversionStream.CreatePcmStream(reader);
-                        var bytes = new byte[convertedStream.Length];
-                        convertedStream.Read(bytes, 0, (int)convertedStream.Length);
-                        HasAudioData.Invoke(this, new TesteEventArgs { bytes = bytes, Timestamp = _timestamp++ });
-                    }
-                    catch (Exception e)
-                    {
-                    }
-                }
+                        WaveFileWriter.CreateWaveFile(@"C:\\temp\\wavs\\teste5.wav", convertedStream);*/
+            }
+            catch (Exception e)
+            {
             }
         }
 
@@ -91,6 +124,20 @@ namespace Signaler
                     using var convertedStream = WaveFormatConversionStream.CreatePcmStream(reader);
                     WaveFileWriter.CreateWaveFile(@"C:\\temp\\wavs\\teste5.wav", convertedStream);
                 }
+            }
+        }
+
+        public static byte[] ReadFully(Stream input)
+        {
+            byte[] buffer = new byte[16 * 1024];
+            using (MemoryStream ms = new MemoryStream())
+            {
+                int read;
+                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                }
+                return ms.ToArray();
             }
         }
     }
