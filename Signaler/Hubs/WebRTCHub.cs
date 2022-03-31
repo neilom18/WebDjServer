@@ -111,6 +111,24 @@ namespace Signaler.Hubs
             await NotifyUpdateUsers();
         }
 
+        public async Task JoinRoomByName(string roomName)
+        {
+            var user = _userManager.GetAll().Where(u => u.ConnectionId == Context.ConnectionId).Single();
+            var room = _roomManager.GetAll().Where(r => r.Name == roomName).FirstOrDefault();
+            if (room is not null)
+            {
+                room.AddUser(user);
+                user.MainRoom = room;
+                await Groups.AddToGroupAsync(user.ConnectionId, room.Id);
+                await Clients.Caller.SendAsync("JoinedRoom", room.Id);
+                await Clients.Group(room.Id).SendAsync("UserJoinedRoom", user.Username);
+
+                user.IsInCall = true;
+                await NotifyRoomUpdates();
+                await NotifyUpdateUsers();
+            }
+        }
+
         /// <summary>
         ///     Deixa de participar de uma sala
         /// </summary>

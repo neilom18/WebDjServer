@@ -151,7 +151,7 @@ namespace Signaler
                 {
                     try
                     {
-                        _mixer.AddRawPacket(pkt);
+                        _mixer.AddRawPacket(pkt, user.MainRoom.Users.ToList());
                         //_mixer.AddRawPacket(pkt.Payload);
                     }
                     catch (Exception e)
@@ -165,10 +165,10 @@ namespace Signaler
                         if(user.Id == receiverUser.Id) continue;
                         receiverUser.PeerConnection?.SendRtpRaw(SDPMediaTypesEnum.audio, pkt.Payload, pkt.Header.Timestamp, pkt.Header.MarkerBit, pkt.Header.PayloadType);
                     }*/
-                    _mixer.HasAudioData += (object e, TesteEventArgs args) =>
+                    /*_mixer.HasAudioData += (object e, TesteEventArgs args) =>
                     {
                         user.PeerConnection.SendRtpRaw(SDPMediaTypesEnum.audio, args.bytes,pkt.Header.Timestamp, 0, 0);
-                    };
+                    };*/
                 }
             };
         }

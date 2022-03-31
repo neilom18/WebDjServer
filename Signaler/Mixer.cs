@@ -10,6 +10,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Org.BouncyCastle.Crypto.Generators;
+using SIPSorcery.Sys;
+using Signaler.Models;
+using System.Collections.Generic;
 
 namespace Signaler
 {
@@ -19,7 +22,9 @@ namespace Signaler
 
         private Stream _audioBuffer;
         private ConcurrentQueue<RTPPacket> _queue;
-        //private System.Timers.Timer _timer;
+        private ConcurrentQueue<AudioData> _queue2;
+        private System.Timers.Timer _timer;
+        private uint _timestamp;
         private byte[] _bytes;
 
         public Mixer(ILogger<Mixer> logger)
@@ -27,9 +32,10 @@ namespace Signaler
             _logger = logger;
             _audioBuffer = new MemoryStream();
             _queue = new ConcurrentQueue<RTPPacket>();
+            _queue2 = new ConcurrentQueue<AudioData>();
             _bytes = new byte[1024 * 1024];
-            //_timer = new System.Timers.Timer(100);
-            //_timestamp = 1234587;
+            _timer = new System.Timers.Timer(20);
+            _timestamp = Crypto.GetRandomUInt();
         }
 
         /// <summary>
@@ -47,39 +53,63 @@ namespace Signaler
                 ProcessRTPPacket();
         }
 
+        public void AddRawPacket(RTPPacket pk, List<User> users)
+        {
+            _queue2.Enqueue(new AudioData {Packet = pk ,Listeners = users });
+        }
+
 
         public void StartAudioProcess()
         {
-            var timer = new System.Timers.Timer(20);
-            timer.AutoReset = true;
-            timer.Enabled = true;
-            timer.Elapsed += Timer_Elapsed;
-            timer.Start();
+            _timer.AutoReset = false;
+            _timer.Elapsed += Timer_Elapsed;
+            _timer.Start();
             //Task.Run(ProcessAudio);
-            //Task.Run(ProcessRTPPacket);
+            Task.Run(ProcessRTPPacket);
+        }
+
+        public void ProcessRTPPackets3()
+        {
+            if (_queue2.IsEmpty) return;
+            while (_queue2.TryDequeue(out var audioData))
+            {
+                foreach (var receiverUser in audioData.Listeners)
+                {
+                    receiverUser.PeerConnection?.SendRtpRaw
+                            (SDPMediaTypesEnum.audio,
+                            audioData.Packet.Payload,
+                            _timestamp,
+                            audioData.Packet.Header.MarkerBit,
+                            audioData.Packet.Header.PayloadType);
+                }
+                _timestamp += 160;
+            }
         }
 
         private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            ProcessRTPPacket();
+            ProcessRTPPackets3();
+            _timer.Start();
         }
 
-        private void ProcessRTPPackets()
+
+
+        private void ProcessRTPPacket()
         {
 
 
 
             while (true)
             {
-                Task.Delay(100);
+                Task.Delay(100).Wait();
                 if (_queue.Count >= 5)
                 {
-                    ProcessRTPPacket();
+                    ProcessRTPPacket2();
                 }
             }
         }
 
-        private void ProcessRTPPacket()
+        private void ProcessRTPPacket2()
         {
             if (_queue.IsEmpty) return;
             try
