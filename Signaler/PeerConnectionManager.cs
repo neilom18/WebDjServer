@@ -130,6 +130,7 @@ namespace Signaler
                 if (state == RTCPeerConnectionState.closed || state == RTCPeerConnectionState.disconnected || state == RTCPeerConnectionState.failed)
                 {
                     _peerConnections.TryRemove(user.Id, out _);
+                    _mixer.RemoveUsersToRelay(user);
                 }
                 else if (state == RTCPeerConnectionState.connected)
                 {
@@ -140,6 +141,7 @@ namespace Signaler
             var offerSdp = peerConnection.createOffer(null);
             await peerConnection.setLocalDescription(offerSdp);
             _peerConnections.TryAdd(user.Id, peerConnection);
+            _mixer.AddUsersToRelay(user);
             return offerSdp;
         }
 
@@ -151,8 +153,8 @@ namespace Signaler
                 {
                     try
                     {
-                        _mixer.AddRawPacket(pkt, user.MainRoom.Users.ToList());
-                        //_mixer.AddRawPacket(pkt.Payload);
+                        //_mixer.AddRawPacket(pkt, user.MainRoom.Users.ToList(), user.Username);
+                        _mixer.AddRawPacket(pkt.Payload);
                     }
                     catch (Exception e)
                     {

@@ -11,5 +11,6 @@ namespace Signaler.Models
     {
         public RTPPacket Packet { get; set; }
         public List<User> Listeners { get; set; }
+        public string SenderName { get; set; }
     }
 }
